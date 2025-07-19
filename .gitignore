@@ -1,6 +1,1 @@
-__pycache__/
-*.pyc
-*.pdf
-*.json
-input/
-output/
+venv?
