@@ -149,7 +149,7 @@ MIT License — free for research and hackathon use.
 ## 👩‍💻 Authors
 
 Built by:
-
+Team Name: Vision Forge
 * **R.K. Larika**
 * **S. Harshini**
 
