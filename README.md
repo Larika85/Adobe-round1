@@ -166,7 +166,7 @@ MIT License — free for research and hackathon use.
 
 ## 👩‍💻 Author
 
-Made by \[Your Name] — developed as part of the “Understand Your Document” hackathon challenge.
+Made by \R.K.Larika and S.Harshini — developed as part of the “Understand Your Document” hackathon challenge.
 
 ---
 
