@@ -3,55 +3,53 @@
 
 ### Challenge Theme: *Connecting the Dots Through Docs*
 
-This solution extracts a structured outline from any PDF — including the document **title**, and all **H1, H2, H3** headings — in a clean, multilingual-aware, hierarchical JSON format.
+This solution intelligently extracts a structured outline from any PDF — including the document **title**, and all **H1, H2, H3** headings — in a clean, multilingual-aware, hierarchical JSON format.
 
 ---
 
 ## 🧠 Approach
 
-Our approach combines **layout heuristics**, **font size clustering**, and **score-based heading detection** to understand the structure of any PDF like a machine would.
+Our approach combines **layout heuristics**, **font size clustering**, and a **score-based heading detection algorithm** to simulate how a machine would understand document structure — no hardcoded assumptions or brittle rules.
 
 ### 🧩 Key Components:
 
-#### 1. **Layout-Aware Block Extraction**
-- Uses [`PyMuPDF`](https://github.com/pymupdf/PyMuPDF) to extract text spans with font size, position, and style metadata.
-- Constructs paragraph blocks per line for heading analysis.
+#### 1. **Layout-Aware Text Block Extraction**
+- Uses [`PyMuPDF`](https://github.com/pymupdf/PyMuPDF) to extract spans with **font size**, **position**, and **style metadata**.
+- Breaks content into paragraph-like blocks per line with relevant features for scoring.
 
-#### 2. **Font Size Clustering**
-We extract all unique font sizes and assign:
-- Largest → `H1`
-- Second Largest → `H2`
-- Third Largest → `H3`
-
-This dynamic strategy adjusts to variations in font across documents.
-
+#### 2. **Dynamic Font Size Clustering**
+- Clusters unique font sizes across the document.
+- Top 3 largest font sizes are mapped to `H1`, `H2`, `H3` **adaptively**.
+  
 ```python
-# cluster_font_sizes
+# utils.py
 font_sizes = sorted(set(font_sizes), reverse=True)
 size_map = {"H1": font_sizes[0], "H2": font_sizes[1], "H3": font_sizes[2]}
 ````
 
-#### 3. **Heading Scoring & Anomaly Filtering**
+#### 3. **Score-Based Heading Detection**
 
-Each block is scored based on:
+Each candidate block is **scored** based on:
 
-* Font size relative to average
-* Boldness, uppercase ratio
-* Short length (likely heading)
-* Top-of-page / left alignment
+* Relative font size
+* Boldness
+* Text length (short = more likely heading)
+* Capitalization (UPPERCASE / Title Case)
+* Alignment (left/top of page)
 * Absence of trailing punctuation
-* Matches multilingual section patterns like `1.1`, `A.2`, `一.二` using Unicode-aware regex
+* Unicode-aware regex patterns like `1.1`, `A.2`, `一.二`
 
-Only high-scoring blocks are treated as heading candidates.
+Only high-scoring blocks are considered potential headings.
 
-#### 4. **Multilingual Support**
+#### 4. **Multilingual Pattern Support**
 
-* Our regex captures multilingual numbering (e.g., Japanese, Hindi, Chinese).
-* Unicode ranges are used for:
+We use Unicode-aware regex to detect heading numbering formats in **Arabic**, **Chinese**, **Japanese**, and **Indic scripts**.
 
-  * Arabic: `\u0600–\u06FF`
-  * CJK: `\u4E00–\u9FFF`
-* Easily extensible to other scripts.
+Examples:
+
+```regex
+^([\dA-Za-z\u0600-\u06FF\u4e00-\u9fff]+)(\.\d+)*[\s\-\:]
+```
 
 ---
 
@@ -59,55 +57,55 @@ Only high-scoring blocks are treated as heading candidates.
 
 ```
 .
-├── main.py                  # Pipeline entry point
-├── layout_parser.py         # Extracts text spans from PDF
-├── heading_ranker.py        # Scores heading blocks using heuristics
-├── utils.py                 # Font size clustering + level mapping
-├── output/                  # Output JSON directory
-├── input/                   # Input PDF directory
-├── Dockerfile               # Submission-ready Dockerfile
-├── README.md                # This file
+├── main.py              # Core pipeline: outline extraction
+├── batch_run.py         # Batch PDF processor (entry point)
+├── layout_parser.py     # Text + layout extractor
+├── heading_ranker.py    # Scoring heuristics
+├── utils.py             # Font clustering & level classification
+├── input/               # Input PDF directory (bind-mounted)
+├── output/              # Output JSON directory (bind-mounted)
+├── requirements.txt     # Python dependencies
+├── Dockerfile           # For reproducible execution
+└── README.md            # You're reading it!
 ```
 
 ---
 
 ## 📦 Libraries Used
 
-| Library             | Purpose                                  |
-| ------------------- | ---------------------------------------- |
-| `PyMuPDF`           | PDF text and layout parsing (`fitz`)     |
-| `re`                | Regex matching for multilingual headings |
-| `json`, `sys`, `os` | File I/O and orchestration               |
-
-No deep learning. No web calls. Fully offline.
+| Library             | Purpose                         |
+| ------------------- | ------------------------------- |
+| `PyMuPDF` (`fitz`)  | PDF layout and text parsing     |
+| `re`                | Regex-based heading detection   |
+| `json`, `os`, `sys` | File handling and orchestration |
 
 ---
 
-## 🔧 Build & Run Instructions
+## 🔧 Docker Instructions
 
-⚠️ Your solution will be run using the *Expected Execution* below — make sure your local testing mirrors this.
-
-### ✅ Build the Docker image
+### 🐳 Build the Docker Image
 
 ```bash
-docker build --platform linux/amd64 -t mysolutionname:somerandomid .
+docker build --platform linux/amd64 -t outline_extractor:harshini .
 ```
 
-### ▶️ Run the Docker container
+### ▶️ Run the Container
 
 ```bash
 docker run --rm \
   -v $(pwd)/input:/app/input \
   -v $(pwd)/output:/app/output \
   --network none \
-  mysolutionname:somerandomid
+  outline_extractor:harshini
 ```
 
-### 🧾 What It Does
+This processes all `.pdf` files in `input/` and outputs `.json` files to `output/`.
 
-* Reads all PDFs in `/app/input`
-* Writes corresponding `filename.json` files into `/app/output`
-* Output format:
+---
+
+## 🧾 Output Format
+
+Each PDF generates a structured JSON like:
 
 ```json
 {
@@ -122,39 +120,23 @@ docker run --rm \
 
 ---
 
-## ⚙️ Constraints Handled
+## ✅ Constraints & Compliance
 
-| Constraint            | Handled?          |
-| --------------------- | ----------------- |
-| ≤ 10s per 50-page PDF | ✅                 |
-| Model size ≤ 200MB    | ✅ (no model used) |
-| No internet           | ✅                 |
-| CPU-only (amd64)      | ✅                 |
-
----
-
-## 🧪 Testing Guide (Locally)
-
-1. Put any `.pdf` files inside the `input/` folder.
-2. Run the docker container.
-3. Check the corresponding `.json` outputs inside `output/`.
+| Requirement             | Status      |
+| ----------------------- | ----------- |
+| ⏱ ≤ 10s per 50-page PDF | ✅ Yes       |
+| 📦 Model size ≤ 200MB   | ✅ No model  |
+| 🌐 No internet required | ✅ Offline   |
+| ⚙️ CPU-only (amd64)     | ✅ Compliant |
 
 ---
 
 ## ✨ Highlights
 
-* ✅ Purely rule-based: fast and explainable
-* 🧠 Intelligent: position, font, and boldness awareness
-* 🌍 Multilingual-aware: supports Hindi, Chinese, Arabic, Japanese patterns
-* ⚡️ Efficient: fully offline, no dependencies larger than PyMuPDF
-
----
-
-## 🔒 Notes
-
-* ❌ No hardcoding or file-specific hacks used
-* ❌ No external model downloads or APIs
-* ✅ Modular and ready to extend for Round 1B
+* ⚡️ Efficient: No heavy models or latency
+* 🔍 Smart scoring logic based on multiple features
+* 🌍 Multilingual pattern detection
+* 🔩 Fully deterministic and testable via Docker
 
 ---
 
@@ -164,15 +146,22 @@ MIT License — free for research and hackathon use.
 
 ---
 
-## 👩‍💻 Author
+## 👩‍💻 Authors
 
-Made by R.K.Larika and S.Harshini — developed as part of the “Understand Your Document” hackathon challenge.
+Built by:
+
+* **R.K. Larika**
+* **S. Harshini**
+
+As part of Adobe’s *“Connecting the Dots”* Hackathon challenge.
 
 ---
 
-```
+## 🚀 Challenge Summary
 
----
+> *“What if a PDF could speak to you, surface insights, and guide your reading?”*
 
-Would you like a `Dockerfile` that matches this README? I can generate that next.
-```
+This solution is the **first step** in enabling smart document understanding. By accurately extracting structured outlines with multilingual support, we’re laying the foundation for a better, context-aware reading experience — paving the way for the interactive webapp in Round 1B.
+
+Let’s redefine reading. Let's connect the dots.
+
