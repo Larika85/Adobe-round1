@@ -148,10 +148,12 @@ MIT License — free for research and hackathon use.
 
 ## 👩‍💻 Authors
 
-Built by:
-Team Name: Vision Forge
-* **R.K. Larika**
-* **S. Harshini**
+## 👷 Built by
+
+**Team Name: Vision Forge**
+
+- **R.K. Larika**  
+- **S. Harshini**
 
 As part of Adobe’s *“Connecting the Dots”* Hackathon challenge.
 
